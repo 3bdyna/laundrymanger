@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المغسلة</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #f8f9fa;
+            --dark-color: #343a40;
+            --light-color: #ffffff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--secondary-color);
+            color: var(--dark-color);
+            overscroll-behavior-y: contain; /* Prevents pull-to-refresh on mobile */
+        }
+
+        .container {
+            padding: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* --- Navigation --- */
+        .nav {
+            display: flex;
+            background-color: var(--dark-color);
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px 10px;
+            background-color: var(--dark-color);
+            color: var(--light-color);
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #495057;
+        }
+
+        .nav-btn.active {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+        }
+
+        /* --- Screens --- */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* --- General Components --- */
+        .card {
+            background-color: var(--light-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="tel"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            color: var(--light-color);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-success { background-color: var(--success-color); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-warning { background-color: var(--warning-color); color: var(--dark-color); }
+        .btn-full { width: 100%; }
+
+        /* --- New Invoice Screen --- */
+        #screen-new-invoice .invoice-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            #screen-new-invoice .invoice-layout {
+                flex-direction: row;
+            }
+            .invoice-main { flex: 2; }
+            .invoice-sidebar { flex: 1; }
+        }
+
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        .item-btn {
+            padding: 15px 10px;
+            font-size: 14px;
+            background-color: var(--light-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .item-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+        }
+
+        .urgent-toggle {
+            display: flex;
+            align-items: center;
+            background-color: var(--warning-color);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .urgent-toggle label { margin-right: 10px; font-weight: bold; }
+        .urgent-toggle input { width: auto; margin: 0; }
+
+        #invoice-summary-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 10px;
+        }
+        #invoice-summary-items li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        #invoice-summary-items li:last-child { border-bottom: none; }
+        .remove-item-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0 5px;
+        }
+        .urgent-tag { color: var(--danger-color); font-weight: bold; font-size: 0.9em; margin-left: 5px;}
+
+        .invoice-total {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--dark-color);
+            color: var(--light-color);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .invoice-total h3 { margin: 0; font-size: 24px; }
+        .invoice-total span { font-size: 28px; font-weight: bold; }
+        
+        /* --- Dashboard Screen --- */
+        .table-responsive { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: var(--secondary-color);
+            font-weight: bold;
+        }
+        .status { font-weight: bold; padding: 5px 10px; border-radius: 5px; color: var(--light-color); }
+        .status-ready { background-color: var(--success-color); }
+        .status-not-ready { background-color: var(--danger-color); }
+        .actions-cell button { margin: 2px; }
+
+        /* --- Settings Screen --- */
+        #settings-items-table input[type="number"] {
+            max-width: 80px;
+            padding: 8px;
+            font-size: 14px;
+        }
+        #settings-add-item-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        #settings-add-item-form input { flex: 1; min-width: 150px; margin: 0; }
+        #settings-add-item-form button { flex-shrink: 0; }
+
+        /* --- Modal for Details --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+        }
+        .modal-content {
+            background-color: var(--light-color);
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            left: 15px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #modal-invoice-details ul {
+            list-style-type: none;
+            padding: 0;
+        }
+         #modal-invoice-details li {
+            padding: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="nav">
+        <button id="nav-new-invoice" class="nav-btn">فاتورة جديدة</button>
+        <button id="nav-dashboard" class="nav-btn">لوحة التحكم</button>
+        <button id="nav-settings" class="nav-btn">الإعدادات</button>
+    </div>
+
+    <div class="container">
+        <!-- ==================== SCREEN 1: NEW INVOICE ==================== -->
+        <div id="screen-new-invoice" class="screen">
+            <div class="invoice-layout">
+                <div class="invoice-main">
+                    <div class="card">
+                        <h2>تفاصيل العميل والخدمة</h2>
+                        <input type="text" id="customer-name" placeholder="اسم العميل (اختياري)">
+                        <input type="tel" id="customer-phone" placeholder="رقم الهاتف (اختياري)">
+                        <select id="service-type">
+                            <option value="wash_iron">غسيل وكوي</option>
+                            <option value="iron_only">كوي فقط</option>
+                            <option value="wash_only">غسيل فقط</option>
+                        </select>
+                        <div class="urgent-toggle">
+                            <label for="urgent-switch">طلب مستعجل؟</label>
+                            <input type="checkbox" id="urgent-switch">
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2>إضافة الأصناف</h2>
+                        <div id="item-grid" class="item-grid">
+                            <!-- Item buttons will be generated by JS -->
+                        </div>
+                        <button id="add-custom-item-btn" class="btn btn-warning" style="margin-top: 15px;">إضافة صنف مخصص</button>
+                    </div>
+                </div>
+
+                <div class="invoice-sidebar">
+                    <div class="card">
+                        <h2>ملخص الفاتورة الحالية</h2>
+                        <ul id="invoice-summary-items">
+                            <!-- Summary items will be added here by JS -->
+                        </ul>
+                        <div class="invoice-total">
+                            <h3>الإجمالي</h3>
+                            <span id="invoice-total-price">0.00</span> ريال
+                        </div>
+                        <button id="save-invoice-btn" class="btn btn-success btn-full" style="margin-top: 20px;">حفظ الفاتورة</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 2: DASHBOARD ==================== -->
+        <div id="screen-dashboard" class="screen">
+            <div class="card">
+                <h2>جميع الطلبات</h2>
+                <div class="table-responsive">
+                    <table id="invoices-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>العميل</th>
+                                <th>الهاتف</th>
+                                <th>الإجمالي</th>
+                                <th>التاريخ</th>
+                                <th>الحالة</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Invoice rows will be generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 3: SETTINGS ==================== -->
+        <div id="screen-settings" class="screen">
+            <div class="card">
+                <h2>إدارة الأصناف والأسعار</h2>
+                <div id="settings-add-item-form">
+                    <input type="text" id="new-item-name" placeholder="اسم الصنف الجديد">
+                    <button id="add-new-item-btn" class="btn btn-primary">إضافة صنف</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="settings-items-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">الصنف</th>
+                                <th colspan="2">غسيل وكوي</th>
+                                <th colspan="2">كوي فقط</th>
+                                <th colspan="2">غسيل فقط</th>
+                                <th rowspan="2">حذف</th>
+                            </tr>
+                            <tr>
+                                <th>عادي</th>
+                                <th>مستعجل</th>
+                                <th>عادي</th>
+                                <th>مستعجل</th>
+                                <th>عادي</th>
+                                <th>مستعجل</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Settings rows will be generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <button id="save-settings-btn" class="btn btn-success btn-full" style="margin-top: 20px;">حفظ الإعدادات</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Invoice Details -->
+    <div id="invoice-details-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>تفاصيل الفاتورة</h2>
+        <div id="modal-invoice-details"></div>
+      </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ==================================
+    // STATE MANAGEMENT & LOCAL STORAGE
+    // ==================================
+    
+    let state = {
+        items: [],
+        invoices: [],
+        currentInvoice: {
+            customerName: '',
+            customerPhone: '',
+            items: [],
+            total: 0,
+        },
+        activeScreen: 'screen-new-invoice'
+    };
+
+    const DB_ITEMS_KEY = 'laundry_app_items';
+    const DB_INVOICES_KEY = 'laundry_app_invoices';
+
+    function loadInitialData() {
+        const storedItems = localStorage.getItem(DB_ITEMS_KEY);
+        const storedInvoices = localStorage.getItem(DB_INVOICES_KEY);
+
+        if (storedItems) {
+            state.items = JSON.parse(storedItems);
+        } else {
+            // Default items if none exist
+            state.items = [
+                { id: Date.now() + 1, name: 'ثوب', prices: { wi_reg: 5, wi_urg: 8, io_reg: 3, io_urg: 5, wo_reg: 4, wo_urg: 6 } },
+                { id: Date.now() + 2, name: 'شماغ', prices: { wi_reg: 4, wi_urg: 6, io_reg: 2, io_urg: 4, wo_reg: 3, wo_urg: 5 } },
+                { id: Date.now() + 3, name: 'قميص', prices: { wi_reg: 4, wi_urg: 7, io_reg: 2, io_urg: 4, wo_reg: 3, wo_urg: 5 } },
+                { id: Date.now() + 4, name: 'بنطلون', prices: { wi_reg: 5, wi_urg: 8, io_reg: 3, io_urg: 5, wo_reg: 4, wo_urg: 6 } },
+                { id: Date.now() + 5, name: 'بطانية', prices: { wi_reg: 15, wi_urg: 25, io_reg: 0, io_urg: 0, wo_reg: 12, wo_urg: 20 } },
+            ];
+            saveItems();
+        }
+
+        if (storedInvoices) {
+            state.invoices = JSON.parse(storedInvoices);
+        }
+        
+        // Find highest invoice number to continue from there
+        let maxId = 0;
+        state.invoices.forEach(inv => {
+            if (inv.id > maxId) maxId = inv.id;
+        });
+        invoiceIdCounter = maxId + 1;
+    }
+
+    function saveItems() {
+        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(state.items));
+    }
+
+    function saveInvoices() {
+        localStorage.setItem(DB_INVOICES_KEY, JSON.stringify(state.invoices));
+    }
+    
+    let invoiceIdCounter = 1;
+
+
+    // ==================================
+    // UI ELEMENTS
+    // ==================================
+    
+    const screens = {
+        newInvoice: document.getElementById('screen-new-invoice'),
+        dashboard: document.getElementById('screen-dashboard'),
+        settings: document.getElementById('screen-settings')
+    };
+    
+    const navButtons = {
+        newInvoice: document.getElementById('nav-new-invoice'),
+        dashboard: document.getElementById('nav-dashboard'),
+        settings: document.getElementById('nav-settings')
+    };
+
+    // New Invoice Screen Elements
+    const customerNameInput = document.getElementById('customer-name');
+    const customerPhoneInput = document.getElementById('customer-phone');
+    const serviceTypeSelect = document.getElementById('service-type');
+    const urgentSwitch = document.getElementById('urgent-switch');
+    const itemGrid = document.getElementById('item-grid');
+    const addCustomItemBtn = document.getElementById('add-custom-item-btn');
+    const invoiceSummaryItems = document.getElementById('invoice-summary-items');
+    const invoiceTotalPrice = document.getElementById('invoice-total-price');
+    const saveInvoiceBtn = document.getElementById('save-invoice-btn');
+
+    // Dashboard Screen Elements
+    const invoicesTableBody = document.querySelector('#invoices-table tbody');
+
+    // Settings Screen Elements
+    const settingsItemsTableBody = document.querySelector('#settings-items-table tbody');
+    const newItemNameInput = document.getElementById('new-item-name');
+    const addNewItemBtn = document.getElementById('add-new-item-btn');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    
+    // Modal elements
+    const modal = document.getElementById('invoice-details-modal');
+    const modalContent = document.getElementById('modal-invoice-details');
+    const closeModalBtn = document.querySelector('.close-btn');
+
+    // ==================================
+    // RENDER FUNCTIONS
+    // ==================================
+    
+    function render() {
+        // Hide all screens
+        Object.values(screens).forEach(screen => screen.classList.remove('active'));
+        // Deactivate all nav buttons
+        Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+
+        // Show the active screen and activate its nav button
+        if (state.activeScreen === 'screen-new-invoice') {
+            screens.newInvoice.classList.add('active');
+            navButtons.newInvoice.classList.add('active');
+            renderNewInvoiceScreen();
+        } else if (state.activeScreen === 'screen-dashboard') {
+            screens.dashboard.classList.add('active');
+            navButtons.dashboard.classList.add('active');
+            renderDashboardScreen();
+        } else if (state.activeScreen === 'screen-settings') {
+            screens.settings.classList.add('active');
+            navButtons.settings.classList.add('active');
+            renderSettingsScreen();
+        }
+    }
+
+    function renderNewInvoiceScreen() {
+        itemGrid.innerHTML = '';
+        state.items.forEach(item => {
+            const button = document.createElement('button');
+            button.className = 'item-btn';
+            button.textContent = item.name;
+            button.dataset.itemId = item.id;
+            itemGrid.appendChild(button);
+        });
+        renderInvoiceSummary();
+    }
+
+    function renderInvoiceSummary() {
+        invoiceSummaryItems.innerHTML = '';
+        state.currentInvoice.total = 0;
+        
+        state.currentInvoice.items.forEach((item, index) => {
+            const li = document.createElement('li');
+            const urgentTag = item.isUrgent ? '<span class="urgent-tag">(مستعجل)</span>' : '';
+            li.innerHTML = `
+                <span>${item.quantity} x ${item.name} ${urgentTag}</span>
+                <span>
+                    ${item.price.toFixed(2)}
+                    <button class="remove-item-btn" data-index="${index}">&times;</button>
+                </span>
+            `;
+            invoiceSummaryItems.appendChild(li);
+            state.currentInvoice.total += item.price;
+        });
+        
+        invoiceTotalPrice.textContent = state.currentInvoice.total.toFixed(2);
+    }
+    
+    function renderDashboardScreen() {
+        invoicesTableBody.innerHTML = '';
+        const sortedInvoices = [...state.invoices].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        if (sortedInvoices.length === 0) {
+            invoicesTableBody.innerHTML = '<tr><td colspan="7">لا توجد فواتير حتى الآن.</td></tr>';
+            return;
+        }
+
+        sortedInvoices.forEach(invoice => {
+            const tr = document.createElement('tr');
+            const statusClass = invoice.status === 'ready' ? 'status-ready' : 'status-not-ready';
+            const statusText = invoice.status === 'ready' ? 'جاهز' : 'غير جاهز';
+            
+            tr.innerHTML = `
+                <td>${invoice.id}</td>
+                <td>${invoice.customerName || '-'}</td>
+                <td>${invoice.customerPhone || '-'}</td>
+                <td>${invoice.total.toFixed(2)}</td>
+                <td>${new Date(invoice.date).toLocaleDateString('ar-EG')}</td>
+                <td><span class="status ${statusClass}">${statusText}</span></td>
+                <td class="actions-cell">
+                    <button class="btn btn-primary btn-sm" data-action="view" data-id="${invoice.id}">عرض</button>
+                    <button class="btn btn-warning btn-sm" data-action="status" data-id="${invoice.id}">تغيير</button>
+                    <button class="btn btn-danger btn-sm" data-action="delete" data-id="${invoice.id}">حذف</button>
+                </td>
+            `;
+            invoicesTableBody.appendChild(tr);
+        });
+    }
+
+    function renderSettingsScreen() {
+        settingsItemsTableBody.innerHTML = '';
+        state.items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.dataset.itemId = item.id;
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td><input type="number" class="price-input" data-price-type="wi_reg" value="${item.prices.wi_reg}"></td>
+                <td><input type="number" class="price-input" data-price-type="wi_urg" value="${item.prices.wi_urg}"></td>
+                <td><input type="number" class="price-input" data-price-type="io_reg" value="${item.prices.io_reg}"></td>
+                <td><input type="number" class="price-input" data-price-type="io_urg" value="${item.prices.io_urg}"></td>
+                <td><input type="number" class="price-input" data-price-type="wo_reg" value="${item.prices.wo_reg}"></td>
+                <td><input type="number" class="price-input" data-price-type="wo_urg" value="${item.prices.wo_urg}"></td>
+                <td><button class="btn btn-danger btn-sm delete-item-btn" data-id="${item.id}">حذف</button></td>
+            `;
+            settingsItemsTableBody.appendChild(tr);
+        });
+    }
+
+    // ==================================
+    // EVENT HANDLERS
+    // ==================================
+    
+    // Navigation
+    Object.keys(navButtons).forEach(key => {
+        navButtons[key].addEventListener('click', () => {
+            const screenId = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+            state.activeScreen = `screen-${screenId}`;
+            render();
+        });
+    });
+
+    // New Invoice Handlers
+    itemGrid.addEventListener('click', (e) => {
+        if (e.target.classList.contains('item-btn')) {
+            const itemId = parseInt(e.target.dataset.itemId);
+            const item = state.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const quantity = parseInt(prompt(`أدخل الكمية لـ "${item.name}":`, '1'));
+            if (isNaN(quantity) || quantity <= 0) return;
+
+            const serviceType = serviceTypeSelect.value;
+            const isUrgent = urgentSwitch.checked;
+            
+            let priceKey;
+            if (serviceType === 'wash_iron') priceKey = isUrgent ? 'wi_urg' : 'wi_reg';
+            else if (serviceType === 'iron_only') priceKey = isUrgent ? 'io_urg' : 'io_reg';
+            else if (serviceType === 'wash_only') priceKey = isUrgent ? 'wo_urg' : 'wo_reg';
+            
+            const unitPrice = item.prices[priceKey];
+            
+            state.currentInvoice.items.push({
+                itemId: item.id,
+                name: item.name,
+                quantity: quantity,
+                isUrgent: isUrgent,
+                price: unitPrice * quantity,
+                unitPrice: unitPrice,
+                serviceType: serviceType
+            });
+            
+            renderInvoiceSummary();
+        }
+    });
+
+    addCustomItemBtn.addEventListener('click', () => {
+        const name = prompt("أدخل اسم الصنف المخصص:");
+        if (!name) return;
+        const price = parseFloat(prompt(`أدخل سعر الوحدة لـ "${name}":`));
+        if (isNaN(price) || price < 0) return;
+        const quantity = parseInt(prompt(`أدخل الكمية لـ "${name}":`, '1'));
+        if (isNaN(quantity) || quantity <= 0) return;
+        
+        state.currentInvoice.items.push({
+            itemId: 'custom-' + Date.now(),
+            name: name,
+            quantity: quantity,
+            isUrgent: false, // Custom items don't have urgent pricing by default
+            price: price * quantity,
+            unitPrice: price,
+            serviceType: 'custom'
+        });
+        renderInvoiceSummary();
+    });
+
+    invoiceSummaryItems.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-item-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            state.currentInvoice.items.splice(index, 1);
+            renderInvoiceSummary();
+        }
+    });
+    
+    customerPhoneInput.addEventListener('blur', () => {
+        const phone = customerPhoneInput.value.trim();
+        if (phone) {
+            const lastInvoiceForPhone = [...state.invoices]
+                .reverse()
+                .find(inv => inv.customerPhone === phone);
+            if (lastInvoiceForPhone && !customerNameInput.value.trim()) {
+                customerNameInput.value = lastInvoiceForPhone.customerName;
+            }
+        }
+    });
+
+    saveInvoiceBtn.addEventListener('click', () => {
+        if (state.currentInvoice.items.length === 0) {
+            alert('يجب إضافة صنف واحد على الأقل إلى الفاتورة.');
+            return;
+        }
+
+        const newInvoice = {
+            id: invoiceIdCounter++,
+            customerName: customerNameInput.value.trim(),
+            customerPhone: customerPhoneInput.value.trim(),
+            items: state.currentInvoice.items,
+            total: state.currentInvoice.total,
+            date: new Date().toISOString(),
+            status: 'not_ready' // 'not_ready' or 'ready'
+        };
+
+        state.invoices.push(newInvoice);
+        saveInvoices();
+        
+        // Reset current invoice
+        state.currentInvoice = { customerName: '', customerPhone: '', items: [], total: 0 };
+        customerNameInput.value = '';
+        customerPhoneInput.value = '';
+        urgentSwitch.checked = false;
+
+        alert(`تم حفظ الفاتورة بنجاح. رقم الفاتورة: ${newInvoice.id}`);
+        state.activeScreen = 'screen-dashboard';
+        render();
+    });
+
+    // Dashboard Handlers
+    invoicesTableBody.addEventListener('click', (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const id = parseInt(button.dataset.id);
+        const invoice = state.invoices.find(inv => inv.id === id);
+        if (!invoice) return;
+
+        if (action === 'delete') {
+            if (confirm(`هل أنت متأكد من حذف الفاتورة رقم ${id}؟`)) {
+                state.invoices = state.invoices.filter(inv => inv.id !== id);
