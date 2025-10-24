@@ -751,3 +751,125 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'delete') {
             if (confirm(`هل أنت متأكد من حذف الفاتورة رقم ${id}؟`)) {
                 state.invoices = state.invoices.filter(inv => inv.id !== id);
+                saveInvoices();
+                renderDashboardScreen();
+            }
+        } else if (action === 'status') {
+            invoice.status = (invoice.status === 'ready') ? 'not_ready' : 'ready';
+            saveInvoices();
+            renderDashboardScreen();
+        } else if (action === 'view') {
+            let detailsHtml = `
+                <p><strong>رقم الفاتورة:</strong> ${invoice.id}</p>
+                <p><strong>العميل:</strong> ${invoice.customerName || 'غير مسجل'}</p>
+                <p><strong>الهاتف:</strong> ${invoice.customerPhone || 'غير مسجل'}</p>
+                <p><strong>التاريخ:</strong> ${new Date(invoice.date).toLocaleString('ar-EG')}</p>
+                <hr>
+                <ul>
+            `;
+            invoice.items.forEach(item => {
+                const urgentTag = item.isUrgent ? ' (مستعجل)' : '';
+                detailsHtml += `<li>
+                    <span>${item.quantity} x ${item.name}${urgentTag}</span>
+                    <span>${item.price.toFixed(2)} ريال</span>
+                </li>`;
+            });
+            detailsHtml += `</ul><hr><p><strong>الإجمالي: ${invoice.total.toFixed(2)} ريال</strong></p>`;
+            
+            modalContent.innerHTML = detailsHtml;
+            modal.style.display = 'block';
+        }
+    });
+    
+    // Modal close
+    closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+    window.addEventListener('click', (e) => {
+        if (e.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // Settings Handlers
+    addNewItemBtn.addEventListener('click', () => {
+        const name = newItemNameInput.value.trim();
+        if (!name) {
+            alert('الرجاء إدخال اسم للصنف.');
+            return;
+        }
+        if (state.items.some(item => item.name === name)) {
+            alert('هذا الصنف موجود بالفعل.');
+            return;
+        }
+
+        state.items.push({
+            id: Date.now(),
+            name: name,
+            prices: { wi_reg: 0, wi_urg: 0, io_reg: 0, io_urg: 0, wo_reg: 0, wo_urg: 0 }
+        });
+        
+        newItemNameInput.value = '';
+        renderSettingsScreen();
+    });
+
+    settingsItemsTableBody.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-item-btn')) {
+            const itemId = parseInt(e.target.dataset.id);
+            if (confirm('هل أنت متأكد من حذف هذا الصنف؟ سيتم حذفه نهائياً.')) {
+                state.items = state.items.filter(item => item.id !== itemId);
+                renderSettingsScreen();
+            }
+        }
+    });
+
+    saveSettingsBtn.addEventListener('click', () => {
+        const rows = settingsItemsTableBody.querySelectorAll('tr');
+        const updatedItems = [];
+        let error = false;
+
+        rows.forEach(row => {
+            const itemId = parseInt(row.dataset.itemId);
+            const item = state.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const newPrices = {};
+            const priceInputs = row.querySelectorAll('.price-input');
+            priceInputs.forEach(input => {
+                const priceType = input.dataset.priceType;
+                const value = parseFloat(input.value);
+                if (isNaN(value) || value < 0) {
+                    error = true;
+                }
+                newPrices[priceType] = value;
+            });
+            
+            updatedItems.push({ ...item, prices: newPrices });
+        });
+
+        if (error) {
+            alert('الرجاء إدخال أرقام صحيحة للأسعار (0 أو أكثر).');
+            return;
+        }
+
+        state.items = updatedItems;
+        saveItems();
+        alert('تم حفظ الإعدادات بنجاح!');
+        state.activeScreen = 'screen-new-invoice';
+        render();
+    });
+
+
+    // ==================================
+    // INITIALIZATION
+    // ==================================
+
+    function initializeApp() {
+        loadInitialData();
+        render(); // Render the default screen
+    }
+
+    initializeApp();
+
+});
+</script>
+</body>
+</html>
